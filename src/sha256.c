@@ -31,7 +31,7 @@ uint8_t *prep(uint8_t *message, size_t *size) {
 	memcpy(message+*size-sizeof(uint64_t), &init_size_bits, sizeof(uint64_t));
 
 	REV_BYTES(message+*size-sizeof(uint64_t), sizeof(uint64_t));
-    REV_BYTES(message, *size);
+	REV_BYTES(message, *size);
 
 	return message;
 }
