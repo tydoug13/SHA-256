@@ -29,9 +29,7 @@ uint8_t *prep(uint8_t *message, size_t *size) {
 	memset(message+init_size, 0x80, 1);
 	memset(message+init_size+1, 0x0, padding);
 	memcpy(message+*size-sizeof(uint64_t), &init_size_bits, sizeof(uint64_t));
-
 	REV_BYTES(message+*size-sizeof(uint64_t), sizeof(uint64_t));
-	REV_BYTES(message, *size);
 
 	return message;
 }
@@ -52,19 +50,17 @@ uint8_t *process(uint8_t *message, size_t *size) {
 }
 
 void expand_chunks(uint8_t *message, size_t *size, volatile CircularBuffer *cbuff) {
-	size_t prev_size = *size;
- 	uint8_t *start;
+	size_t init_size = *size;
  	uint32_t *w, s0, s1;
 
 	for (size_t count = 0; *size > 0; count++) {
 		while (cbuff->buffer[cbuff->tail] != NULL);
 
-		start = (uint8_t *) message+*size;
 		w = malloc(CHUNK_SIZE_BYTES * WORD_SIZE_BYTES);
+		COPY_WORDS(w, (uint8_t *) message, CHUNK_SIZE_WORDS);
 
-		COPY_WORDS(w, start-CHUNK_SIZE_BYTES, CHUNK_SIZE_WORDS);
-		REV_BYTES(w, CHUNK_SIZE_BYTES);
 		*size -= CHUNK_SIZE_BYTES;
+		message += CHUNK_SIZE_BYTES;
 
 		for (size_t i = 16; i < CHUNK_SIZE_BYTES; ++i) {
 			s0 = RROT(w[i - 15], 7) ^ RROT(w[i - 15], 18) ^ (w[i - 15] >> 3);
@@ -74,14 +70,9 @@ void expand_chunks(uint8_t *message, size_t *size, volatile CircularBuffer *cbuf
 
 		cbuff->buffer[cbuff->tail] = w;
 		cbuff->tail = (cbuff->tail+1) & (cbuff->buff_size-1);
-
-		if ((count & 0xf) == 0) {
-			mremap(message, prev_size, *size, MREMAP_FIXED);
-			prev_size = *size;
-		}
 	}
 
-	mremap(message, prev_size, 0, MREMAP_FIXED);
+	mremap(message-init_size, init_size, 0, MREMAP_FIXED);
 }
 
 void *loop_compress(void *args) {
@@ -161,20 +152,22 @@ int main(int argc, char **argv) {
 		fname = argv[1];
 	}
 
-	if (access(fname, F_OK) == -1) {
-		errno = ENOENT;
-		const char *msg_fmt = "%s: file \'%s\' does not exist";
-		char err_msg[strlen(msg_fmt)-4+strlen(prog)+strlen(fname)+1];
-		snprintf(err_msg, sizeof(err_msg), msg_fmt, prog, fname);
-		perror(err_msg);
-		return errno;
-	} else if (access(fname, R_OK) == -1) {
-		errno = EACCES;
-		const char *msg_fmt = "%s: cannot read file \'%s\'";
-		char err_msg[strlen(msg_fmt)-4+strlen(prog)+strlen(fname)+1];
-		snprintf(err_msg, sizeof(err_msg), msg_fmt, prog, fname);
-		perror(err_msg);
-		return errno;
+	if (access(fname, R_OK) == -1) {
+		if (access(fname, F_OK) == -1) {
+			errno = ENOENT;
+			const char *msg_fmt = "%s: file \'%s\' does not exist";
+			char err_msg[strlen(msg_fmt)-4+strlen(prog)+strlen(fname)+1];
+			snprintf(err_msg, sizeof(err_msg), msg_fmt, prog, fname);
+			perror(err_msg);
+			return errno;
+		} else {
+			errno = EACCES;
+			const char *msg_fmt = "%s: cannot read file \'%s\'";
+			char err_msg[strlen(msg_fmt)-4+strlen(prog)+strlen(fname)+1];
+			snprintf(err_msg, sizeof(err_msg), msg_fmt, prog, fname);
+			perror(err_msg);
+			return errno;
+		}
 	}
 
 	size_t size;

@@ -35,6 +35,7 @@ uint8_t *readFile(char *fname, size_t *size);
 uint8_t *prep(uint8_t *message, size_t *size);
 uint8_t *process(uint8_t *message, size_t *size);
 void expand_chunks(uint8_t *message, size_t *size, volatile CircularBuffer *cbuff);
+void *reverse_message(void *args);
 void *loop_compress(void *args);
 
 #endif /* SHA256_H_ */
