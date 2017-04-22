@@ -1,6 +1,3 @@
-#include <stdlib.h>
-#include <stdio.h>
-#include <pthread.h>
 #include "cbuff.h"
 
 CircularBuffer *cbuff_create(size_t buff_size) {
@@ -9,7 +6,7 @@ CircularBuffer *cbuff_create(size_t buff_size) {
 	size_t N = buff_size-1;
 	size_t logN = 0;
 	
-	while(N > 0) {
+	while (N > 0) {
 		N = N >> 1;
 		logN++;
 	}

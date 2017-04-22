@@ -5,7 +5,6 @@
 
 #include "cbuff.h"
 #include <stdint.h>
-#include <fcntl.h>
 
 #define WORD_SIZE_BYTES sizeof(uint32_t)
 #define WORD_SIZE_BITS (WORD_SIZE_BYTES << 3)
@@ -13,7 +12,7 @@
 #define CHUNK_SIZE_WORDS (CHUNK_SIZE_BYTES/WORD_SIZE_BYTES)
 
 /* rotates word W to the right by R bits */
-#define RROT(W, R) (((W) >> (R)) | (W << (WORD_SIZE_BITS-(R))))
+#define RROT(W, R) (((W) >> (R)) | ((W) << (WORD_SIZE_BITS-(R))))
 
 /* reverses buffer B containing L bytes */
 #define REV_BYTES(B, L) \

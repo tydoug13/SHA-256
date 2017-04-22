@@ -1,8 +1,6 @@
 #include "sha256.h"
 #include "cbuff.h"
-#include <stdlib.h>
 #include <stdio.h>
-#include <stdint.h>
 #include <string.h>
 #include <fcntl.h>
 #include <pthread.h>
@@ -76,10 +74,12 @@ void expand_chunks(uint8_t *message, size_t *size, volatile CircularBuffer *cbuf
 		cbuff->tail = (cbuff->tail+1) & (cbuff->buff_size-1);
 
 		if ((count & 0xf) == 0) {
-			mremap(start, prev_size, *size, MREMAP_FIXED);
+			mremap(message, prev_size, *size, MREMAP_FIXED);
 			prev_size = *size;
 		}
 	}
+
+	mremap(message, prev_size, 0, MREMAP_FIXED);
 }
 
 void *loop_compress(void *args) {
@@ -98,9 +98,9 @@ void *loop_compress(void *args) {
 		0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2
 	};
 
-    volatile CircularBuffer *cbuff = ((void **) args)[0];
-    size_t n_chunks = *((size_t *) ((void **) args)[1]);
-    
+	volatile CircularBuffer *cbuff = ((void **) args)[0];
+	size_t n_chunks = *((size_t *) ((void **) args)[1]);
+
 	volatile uint32_t *w;
 	uint32_t a[8], S0, S1, ch, temp1, temp2, maj;
 	size_t i, j, count = 0;	
@@ -154,7 +154,7 @@ int main(int argc, char **argv) {
 
 	for (size_t i = 0; i < size; ++i)
 		fprintf(stdout, "%02x", message[i]);
-	putc('\n', stdout);
+	printf("  %s\n", argv[1]);
 
 	return 0;
 }
