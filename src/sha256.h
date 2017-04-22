@@ -31,7 +31,7 @@
 	{ memcpy(B1, B0, (NW)*WORD_SIZE_BYTES); \
 	  REV_ENDIAN(B1, (NW)); } 
 
-uint8_t *readFile(char *name, size_t *size);
+uint8_t *readFile(char *fname, size_t *size);
 uint8_t *prep(uint8_t *message, size_t *size);
 uint8_t *process(uint8_t *message, size_t *size);
 void expand_chunks(uint8_t *message, size_t *size, volatile CircularBuffer *cbuff);

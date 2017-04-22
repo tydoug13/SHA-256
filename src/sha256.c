@@ -1,17 +1,19 @@
 #include "sha256.h"
 #include "cbuff.h"
 #include <stdio.h>
-#include <string.h>
+#include <unistd.h>
 #include <fcntl.h>
+#include <errno.h>
+#include <string.h>
 #include <pthread.h>
 #include <sys/stat.h>
 #include <sys/mman.h>
 
-uint8_t *readFile(char *name, size_t *size) {
-	int fd = open(name, O_RDONLY);
-
+uint8_t *readFile(char *fname, size_t *size) {
+	int fd = open(fname, O_RDONLY);
+	
 	struct stat st;
-	stat(name, &st);
+	stat(fname, &st);
 	*size = st.st_size;
 
 	return mmap(NULL, *size, PROT_READ|PROT_WRITE, MAP_PRIVATE, fd, 0);
@@ -145,16 +147,46 @@ void *loop_compress(void *args) {
 }
 
 int main(int argc, char **argv) {
+	char *prog = argv[0];
+	char *fname = NULL;
+
+	if (argc < 2) {
+		errno = EINVAL;
+		const char *msg_fmt = "%s: input file not specified";
+		char err_msg[strlen(msg_fmt)-2+strlen(prog)+1];
+		snprintf(err_msg, sizeof(err_msg), msg_fmt, prog);
+		perror(err_msg);
+		return errno;
+	} else {
+		fname = argv[1];
+	}
+
+	if (access(fname, F_OK) == -1) {
+		errno = ENOENT;
+		const char *msg_fmt = "%s: file \'%s\' does not exist";
+		char err_msg[strlen(msg_fmt)-4+strlen(prog)+strlen(fname)+1];
+		snprintf(err_msg, sizeof(err_msg), msg_fmt, prog, fname);
+		perror(err_msg);
+		return errno;
+	} else if (access(fname, R_OK) == -1) {
+		errno = EACCES;
+		const char *msg_fmt = "%s: cannot read file \'%s\'";
+		char err_msg[strlen(msg_fmt)-4+strlen(prog)+strlen(fname)+1];
+		snprintf(err_msg, sizeof(err_msg), msg_fmt, prog, fname);
+		perror(err_msg);
+		return errno;
+	}
+
 	size_t size;
 	uint8_t *message;
 
-	message = readFile(argv[1], &size);
+	message = readFile(fname, &size);
 	message = prep(message, &size);
 	message = process(message, &size);
 
 	for (size_t i = 0; i < size; ++i)
 		fprintf(stdout, "%02x", message[i]);
-	printf("  %s\n", argv[1]);
+	printf("  %s\n", fname);
 
 	return 0;
 }
